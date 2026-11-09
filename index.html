@@ -244,6 +244,7 @@
     .js [data-reveal] { opacity: 1; transform: none; }
   }
 </style>
+<link rel="stylesheet" href="herramienta.css">
 </head>
 <body>
 
@@ -313,30 +314,10 @@
     </section>
 
     <section class="block" id="calculadora">
-      <p class="eyebrow" data-reveal>Calculadora</p>
-      <h2 data-reveal style="--d:70ms">Calcula el tamaño aproximado</h2>
-      <p class="sub" data-reveal style="--d:140ms">Elige si conoces tu consumo mensual (el de la factura) o el diario, y mueve el control.</p>
-      <div class="panel calc" data-reveal="scale">
-        <div>
-          <div class="calc-head">
-            <span class="calc-label" id="calcLabel">Consumo</span>
-            <div class="seg" role="radiogroup" aria-labelledby="calcLabel">
-              <input type="radio" name="per" id="perM" value="m" checked><label for="perM">Mensual</label>
-              <input type="radio" name="per" id="perD" value="d"><label for="perD">Diario</label>
-            </div>
-          </div>
-          <output class="big" id="kwhOut" for="kwh">350<small>kWh/mes</small></output>
-          <input id="kwh" type="range" min="100" max="1500" step="10" value="350" aria-labelledby="calcLabel">
-          <p class="eq" id="eq">≈ 11,7 kWh al día</p>
-        </div>
-        <div class="results" aria-live="polite">
-          <div class="res"><b id="rKwp">3,2<small>kWp</small></b><span>Potencia solar</span></div>
-          <div class="res"><b id="rPan">8<small>paneles</small></b><span>de 450 W cada uno</span></div>
-          <div class="res"><b id="rBat">5<small>kWh</small></b><span>Batería orientativa</span></div>
-          <div class="res"><b id="rYear">4.260<small>kWh/año</small></b><span>Producción estimada</span></div>
-        </div>
-        <p class="note">Estimación orientativa con 4,5 horas de sol pico al día y un 80 % de rendimiento del sistema. Un mes se cuenta como 30 días. El estudio real depende de tu tejado, tu zona y tus horarios.</p>
-      </div>
+      <p class="eyebrow" data-reveal>Herramienta</p>
+      <h2 data-reveal style="--d:70ms">Diseña y presupuesta tu instalación solar</h2>
+      <p class="sub" data-reveal style="--d:140ms">Paneles, inversor (de red o híbrido), batería, cableado y coste estimado. Si no conoces tus eficiencias, las estimamos por ti.</p>
+      <div class="panel tool" id="tool"><noscript>Esta herramienta necesita JavaScript.</noscript></div>
     </section>
 
     <section class="block" id="contacto">
@@ -503,62 +484,8 @@
       card.style.setProperty('--my', (e.clientY - r.top) + 'px');
     }, { passive: true });
   }
-
-  /* ---------- Calculadora orientativa: la base de cálculo es el consumo diario (kWh/día) ---------- */
-  var HSP = 4.5, PR = 0.8, PANEL_W = 450, DAYS = 30;
-  var fmt = function (n, d) {
-    var s = n.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
-    return s.replace(/^(\d{4,})/, function (m) { return m.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); });
-  };
-  var kwh = document.getElementById('kwh');
-  var radios = document.querySelectorAll('input[name="per"]');
-  var MODES = {
-    m: { min: 100, max: 1500, step: 10, unit: 'kWh/mes', toDaily: function (x) { return x / DAYS; }, fromDaily: function (d) { return d * DAYS; } },
-    d: { min: 3, max: 50, step: 0.5, unit: 'kWh/día', toDaily: function (x) { return x; }, fromDaily: function (d) { return d; } }
-  };
-  var mode = 'm';
-  var daily = 350 / DAYS;
-
-  function clamp(x, lo, hi) { return Math.min(hi, Math.max(lo, x)); }
-
-  function calc() {
-    var kwp = daily / (HSP * PR);
-    var panels = Math.ceil(kwp * 1000 / PANEL_W);
-    var battery = Math.max(2, Math.round(daily * 0.4 * 2) / 2);
-    var year = daily * 365;
-    var cfg = MODES[mode];
-    var shown = Number(kwh.value);
-    var dec = cfg.step < 1 ? 1 : 0;
-    kwh.style.setProperty('--pct', ((shown - cfg.min) / (cfg.max - cfg.min) * 100).toFixed(1) + '%');
-    document.getElementById('kwhOut').innerHTML = fmt(shown, dec) + '<small>' + cfg.unit + '</small>';
-    document.getElementById('eq').textContent = mode === 'm'
-      ? '≈ ' + fmt(daily, 1) + ' kWh al día'
-      : '≈ ' + fmt(Math.round(daily * DAYS), 0) + ' kWh al mes';
-    document.getElementById('rKwp').innerHTML = fmt(kwp, 1) + '<small>kWp</small>';
-    document.getElementById('rPan').innerHTML = panels + '<small>paneles</small>';
-    document.getElementById('rBat').innerHTML = fmt(battery, battery % 1 ? 1 : 0) + '<small>kWh</small>';
-    document.getElementById('rYear').innerHTML = fmt(Math.round(year / 10) * 10, 0) + '<small>kWh/año</small>';
-  }
-
-  function setMode(next) {
-    var cfg = MODES[next];
-    var val = clamp(Math.round(cfg.fromDaily(daily) / cfg.step) * cfg.step, cfg.min, cfg.max);
-    mode = next;
-    kwh.min = cfg.min; kwh.max = cfg.max; kwh.step = cfg.step; kwh.value = val;
-    daily = cfg.toDaily(val);
-    calc();
-  }
-
-  var calcQ = 0;
-  kwh.addEventListener('input', function () {
-    daily = MODES[mode].toDaily(Number(kwh.value));
-    if (!calcQ) { calcQ = requestAnimationFrame(function () { calcQ = 0; calc(); }); }
-  });
-  Array.prototype.forEach.call(radios, function (r) {
-    r.addEventListener('change', function () { if (r.checked) { setMode(r.value); } });
-  });
-  calc();
 })();
 </script>
+<script src="herramienta.js" defer></script>
 </body>
 </html>
