@@ -35,3 +35,4 @@
 @media print{.bg,.veil,.top,.progress,.hero,#servicios,#proceso,#contacto,.t-form,.t-acts,.t-a{display:none!important}
 body,.panel{background:#fff!important;color:#000!important}.tool{display:block}.t-out{position:static;max-height:none}
 .t-box,.t-k div{background:#fff!important;border-color:#999!important}.t-k b,.t-i span,.t-i b,.t-box h3,.t-k small{color:#000!important}h2,.sub,.eyebrow{color:#000!important}}
+.t-box p+p{margin-top:8px}
