@@ -61,8 +61,6 @@
   @media (orientation: portrait) { .bg { background-image: url("poster-v.webp"); } }
   .bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .9s ease; }
   .bg.on video { opacity: 1; }
-  /* Al acabar cada vuelta el vídeo se funde con el póster (que es su primer fotograma): bucle sin salto y sin recodificar */
-  .bg.on.wrap video { opacity: 0; }
   /* El vídeo es vertical (1080×1920). En pantallas horizontales se gira 90° para verlo entero, sin recortarlo */
   @media (orientation: landscape) {
     .bg video { inset: auto; left: 50%; top: 50%; width: 100vh; height: 100vw; transform: translate(-50%, -50%) rotate(90deg); }
@@ -256,7 +254,7 @@
 <div class="progress" id="progress" aria-hidden="true"></div>
 
 <div class="bg" id="bg" aria-hidden="true">
-  <video id="bgv" muted loop playsinline preload="none" tabindex="-1" disablepictureinpicture disableremoteplayback></video>
+  <video id="bgv" muted playsinline preload="none" tabindex="-1" disablepictureinpicture disableremoteplayback></video>
 </div>
 <div class="veil" aria-hidden="true"></div>
 <div class="veil-extra" id="veilExtra" aria-hidden="true"></div>
@@ -375,40 +373,51 @@
   var mq = function (q) { return window.matchMedia(q).matches; };
   var reduced = mq('(prefers-reduced-motion: reduce)');
 
-  /* ---------- Vídeo de fondo ----------
-     El póster (ya cargado) es lo primero que se ve. El vídeo original se pide cuando la página terminó de cargar
-     y entra con un fundido. Si el navegador no reproduce VP9 se usa una copia H.264 de la misma calidad.
+  /* ---------- Vídeo de fondo controlado por el scroll ----------
+     El vídeo no se reproduce ni se repite: su instante actual depende de lo que hayas bajado en la página
+     (arriba = primer fotograma, abajo = último). Así no consume nada mientras estás quieto, y mientras
+     deslizas solo se decodifica el fotograma que toca. El vídeo lleva un fotograma clave cada 12 fotogramas
+     para que cada salto sea rápido. El póster (primer fotograma) se ve hasta que el vídeo esté listo.
      Sin vídeo si el usuario pide menos movimiento o ahorro de datos. */
   var bg = document.getElementById('bg');
   var video = document.getElementById('bgv');
   var conn = navigator.connection || {};
   var skipVideo = reduced || conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '');
-  var SRC = '';
-  if (video.canPlayType) {
-    if (video.canPlayType('video/mp4; codecs="vp09.00.41.08"') !== '') { SRC = 'bg.mp4'; }
-    else if (video.canPlayType('video/mp4; codecs="avc1.640029"') !== '') { SRC = 'bg-h264.mp4'; }
+  var canPlay = video.canPlayType && video.canPlayType('video/mp4; codecs="avc1.640029"') !== '';
+  var dur = 0, shown = 0, ready = false, scrubRaf = 0;
+
+  function goal() {
+    var max = Math.max(1, doc.scrollHeight - window.innerHeight);
+    var p = Math.min(1, Math.max(0, (window.pageYOffset || doc.scrollTop) / max));
+    return p * Math.max(0, dur - 0.05);
   }
-  function startVideo() {
-    video.preload = 'auto';
-    video.src = SRC;
-    video.muted = true;
+  function scrub() {
+    scrubRaf = 0;
+    var g = goal();
+    shown += (g - shown) * 0.22;                       /* suaviza: el vídeo "desliza" hacia la posición */
+    if (Math.abs(g - shown) < 0.012) { shown = g; }
+    if (!video.seeking && Math.abs(video.currentTime - shown) > 0.017) { video.currentTime = shown; }
+    if (shown !== g || video.seeking) { scrubRaf = requestAnimationFrame(scrub); }
+  }
+  function kick() { if (ready && !scrubRaf) { scrubRaf = requestAnimationFrame(scrub); } }
+
+  video.addEventListener('loadeddata', function () {
+    dur = video.duration;
+    var start = function () {
+      video.pause();                                    /* el play/pause inicial "despierta" el vídeo en iOS */
+      ready = true; shown = goal(); video.currentTime = shown;
+      bg.classList.add('on');
+      kick();
+    };
     var p = video.play();
-    if (p && p.catch) { p.catch(function () { /* el póster se queda de fondo */ }); }
-  }
-  video.addEventListener('playing', function () { bg.classList.add('on'); });
-  /* Fundido de bucle: el último segundo se disuelve hacia el póster y la nueva vuelta vuelve a entrar */
-  video.addEventListener('timeupdate', function () {
-    if (!video.duration) { return; }
-    if (video.duration - video.currentTime < 0.95) { bg.classList.add('wrap'); }
-    else if (video.currentTime > 0.1 && video.currentTime < 3) { bg.classList.remove('wrap'); }
+    if (p && p.then) { p.then(start, start); } else { start(); }
   });
-  if (!skipVideo && SRC) {
-    var go = function () { (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(startVideo, { timeout: 1500 }); };
+
+  if (!skipVideo && canPlay) {
+    var go = function () { (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(function () { video.preload = 'auto'; video.src = 'bg-scrub.mp4'; video.muted = true; video.load(); }, { timeout: 1500 }); };
     if (document.readyState === 'complete') { go(); } else { window.addEventListener('load', go, { once: true }); }
-    /* No gastar batería con la pestaña oculta */
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) { video.pause(); } else { var p = video.play(); if (p && p.catch) { p.catch(function () {}); } }
-    });
+    window.addEventListener('scroll', kick, { passive: true });
+    window.addEventListener('resize', kick, { passive: true });
   }
 
   /* ---------- Scroll: un solo manejador, una sola lectura y escrituras solo de transform/opacity ---------- */
