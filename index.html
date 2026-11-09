@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thunderwatt · Energía solar y baterías</title>
+<meta name="description" content="Thunderwatt diseña e instala paneles solares y baterías de almacenamiento para viviendas, comunidades y negocios. Pide tu estudio gratuito.">
+<meta name="theme-color" content="#06161a">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2306161a'/%3E%3Cpath d='M37 8 15 36h14l-3 20 23-30H35z' fill='%23f1d96b'/%3E%3C/svg%3E">
+<script>document.documentElement.className += ' js';</script>
+
+<!-- El póster se pide enseguida: es lo primero que se ve mientras llega el vídeo -->
+<link rel="preload" as="image" href="poster-h.webp" type="image/webp" media="(orientation: landscape)" fetchpriority="high">
+<link rel="preload" as="image" href="poster-v.webp" type="image/webp" media="(orientation: portrait)" fetchpriority="high">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* Layout: vídeo fijo a pantalla completa con póster; cabecera fija; portada con titular abajo a la izquierda;
+     secciones de servicios, proceso, calculadora y contacto sobre paneles de degradado oscuro que se leen sobre el vídeo.
+     Rendimiento: solo se animan transform y opacity (van por la GPU); no hay backdrop-filter ni blur sobre el vídeo. */
+  :root {
+    --ink: #f4f7f2;
+    --ink-soft: #c9d8d0;
+    --night: #06161a;
+    --bolt: #f1d96b;          /* amarillo rayo */
+    --mint: #6ff0d6;          /* verde agua, eco del vídeo */
+    --lime: #d8f27a;
+    --line: rgba(244, 247, 242, 0.13);
+    --grad: linear-gradient(100deg, #8ff0dc 0%, #f1d96b 58%, #e4f58f 100%);
+    --ease: cubic-bezier(.2, .7, .2, 1);
+    --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+    --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--night);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--bolt); outline-offset: 3px; border-radius: 6px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); }
+  .skip { position: fixed; left: 12px; top: -60px; z-index: 100; background: var(--bolt); color: #1a1600; padding: 10px 16px; border-radius: 10px; font-weight: 600; text-decoration: none; transition: top .2s; }
+  .skip:focus { top: 12px; }
+
+  /* ---------- Fondo ---------- */
+  .bg {
+    position: fixed; inset: 0; z-index: -3; background: var(--night) url("poster-h.webp") center / cover no-repeat;
+    transform: translateZ(0);
+  }
+  @media (orientation: portrait) { .bg { background-image: url("poster-v.webp"); } }
+  .bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity 1.2s ease; }
+  .bg.on video { opacity: 1; }
+  /* Velo fijo (se pinta una sola vez) + capa de oscurecimiento cuya opacidad sube al hacer scroll */
+  .veil {
+    position: fixed; inset: 0; z-index: -2; pointer-events: none;
+    background:
+      linear-gradient(to bottom, rgba(6,22,26,0.55) 0%, rgba(6,22,26,0) 18%),
+      linear-gradient(to top, rgba(6,22,26,0.94) 0%, rgba(6,22,26,0.58) 38%, rgba(6,22,26,0) 72%),
+      radial-gradient(120% 90% at 50% 40%, rgba(6,22,26,0) 55%, rgba(6,22,26,0.45) 100%);
+  }
+  .veil-extra { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--night); opacity: 0; }
+
+  /* Barra de progreso de lectura */
+  .progress { position: fixed; left: 0; top: 0; right: 0; height: 3px; z-index: 60; background: var(--grad); transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
+
+  /* ---------- Cabecera ---------- */
+  .top { position: fixed; inset: 0 0 auto 0; z-index: 50; }
+  .top::before { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6,22,26,0.97), rgba(6,22,26,0.9)); box-shadow: 0 1px 0 rgba(244,247,242,0.08); opacity: 0; transition: opacity .35s ease; }
+  .top.scrolled::before { opacity: 1; }
+  .top .wrap { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 72px; }
+  .brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-display); font-weight: 800; font-size: 1.32rem; letter-spacing: -0.02em; text-decoration: none; }
+  .brand .mark { width: 36px; height: 36px; border-radius: 11px; background: var(--grad); display: grid; place-items: center; box-shadow: 0 6px 20px -4px rgba(241,217,107,.45); transition: transform .4s var(--ease); }
+  .brand:hover .mark { transform: rotate(-8deg) scale(1.06); }
+  .brand .mark svg { width: 20px; height: 20px; fill: #0b1d1f; }
+  .brand b { font-weight: 800; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .nav { display: flex; align-items: center; gap: 6px; font-size: 0.95rem; font-weight: 500; }
+  .nav a { position: relative; text-decoration: none; color: var(--ink-soft); padding: 8px 14px; border-radius: 999px; transition: color .2s, background .2s; }
+  .nav a:hover { color: var(--ink); background: rgba(244,247,242,0.07); }
+  .nav a.cta { white-space: nowrap; margin-left: 8px; background: var(--grad); color: #1a1600; font-weight: 600; padding: 9px 18px; }
+  .nav a.cta:hover { background: var(--grad); filter: brightness(1.06); }
+
+  /* ---------- Portada ---------- */
+  .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: flex-end; padding-block: 110px 64px; position: relative; }
+  .hero-inner { width: 100%; will-change: transform, opacity; }
+  .kicker { display: inline-flex; align-items: center; gap: 10px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--bolt); margin: 0 0 22px; padding: 8px 16px 8px 14px; border-radius: 999px; background: linear-gradient(120deg, rgba(241,217,107,.14), rgba(111,240,214,.06)), rgba(6,22,26,.62); border: 1px solid rgba(241,217,107,.3); }
+  .kicker i { width: 8px; height: 8px; border-radius: 50%; background: var(--bolt); box-shadow: 0 0 0 0 rgba(241,217,107,.6); animation: pulse 2.2s ease-out infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(241,217,107,.55); } 70%, 100% { box-shadow: 0 0 0 12px rgba(241,217,107,0); } }
+  h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(2.7rem, 8.2vw, 6.6rem); line-height: 0.98; letter-spacing: -0.035em; margin: 0; max-width: 13ch; text-wrap: balance; text-shadow: 0 4px 40px rgba(0,0,0,.35); }
+  .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; text-shadow: none; }
+  .lead { max-width: 52ch; font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: var(--ink-soft); margin: 28px 0 0; text-shadow: 0 2px 20px rgba(0,0,0,.4); }
+  .actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 36px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 10px; margin: 40px 0 0; padding: 0; list-style: none; }
+  .tags li { font-size: 0.86rem; font-weight: 500; color: var(--ink); padding: 7px 14px 7px 12px; border-radius: 999px; background: rgba(6,22,26,.55); border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px; }
+  .tags li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); }
+  .scroll-cue { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); bottom: 70px; display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 0.72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-soft); writing-mode: vertical-rl; text-decoration: none; }
+  .scroll-cue::after { content: ""; width: 1px; height: 56px; background: linear-gradient(to bottom, var(--bolt), transparent); transform-origin: 50% 0; animation: drip 2.4s var(--ease) infinite; }
+  @keyframes drip { 0% { transform: scaleY(0); opacity: 1; } 60% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(1); opacity: 0; } }
+
+  /* Entrada de la portada (solo CSS: no espera a JS) */
+  @keyframes rise { from { opacity: 0; transform: translate3d(0, 26px, 0); } to { opacity: 1; transform: none; } }
+  .hero-inner > * { animation: rise 1s var(--ease) both; }
+  .hero-inner > :nth-child(1) { animation-delay: .15s; }
+  .hero-inner > :nth-child(2) { animation-delay: .28s; }
+  .hero-inner > :nth-child(3) { animation-delay: .42s; }
+  .hero-inner > :nth-child(4) { animation-delay: .56s; }
+  .hero-inner > :nth-child(5) { animation-delay: .7s; }
+
+  /* Botones */
+  .btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 28px; border-radius: 999px; border: 0; font-family: var(--font-body); font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s; isolation: isolate; }
+  .btn svg { width: 18px; height: 18px; transition: transform .25s var(--ease); }
+  .btn:hover svg { transform: translateX(4px); }
+  .btn-main { background: linear-gradient(120deg, #f6e27a, #d8f27a); color: #1a1600; box-shadow: 0 14px 34px -12px rgba(241,217,107,.55); }
+  .btn-main::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform: translateX(-120%); transition: transform .7s var(--ease); }
+  .btn-main:hover { transform: translateY(-3px); box-shadow: 0 20px 40px -12px rgba(241,217,107,.7); }
+  .btn-main:hover::after { transform: translateX(120%); }
+  .btn-ghost { border: 1px solid rgba(244,247,242,.28); color: var(--ink); background: linear-gradient(120deg, rgba(244,247,242,.08), rgba(244,247,242,.02)); }
+  .btn-ghost:hover { transform: translateY(-3px); border-color: rgba(244,247,242,.6); background: rgba(244,247,242,.12); }
+
+  /* ---------- Secciones ---------- */
+  section.block { padding-block: 96px 8px; scroll-margin-top: 56px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 12px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mint); margin: 0 0 16px; }
+  .eyebrow::before { content: ""; width: 34px; height: 2px; border-radius: 2px; background: var(--grad); }
+  h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.9rem, 4.6vw, 3.1rem); letter-spacing: -0.028em; line-height: 1.04; margin: 0 0 16px; max-width: 20ch; text-wrap: balance; text-shadow: 0 3px 30px rgba(0,0,0,.4); }
+  .sub { color: var(--ink-soft); max-width: 56ch; margin: 0 0 40px; text-shadow: 0 2px 18px rgba(0,0,0,.45); }
+
+  .panel {
+    position: relative; overflow: hidden; min-width: 0; border-radius: 22px; padding: 28px;
+    background:
+      radial-gradient(90% 120% at 0% 0%, rgba(111,240,214,.10), transparent 55%),
+      linear-gradient(160deg, rgba(14,46,50,.78), rgba(6,22,26,.86) 65%);
+    border: 1px solid var(--line);
+    box-shadow: 0 24px 50px -26px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07);
+    transition: transform .4s var(--ease), border-color .4s, box-shadow .4s;
+  }
+  /* Resplandor que sigue al cursor (solo con ratón) */
+  .panel::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s; background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgba(241,217,107,.16), transparent 62%); }
+  @media (hover: hover) {
+    .lift:hover { transform: translateY(-6px); border-color: rgba(241,217,107,.38); box-shadow: 0 30px 60px -26px rgba(0,0,0,.8), 0 0 0 1px rgba(241,217,107,.08), inset 0 1px 0 rgba(255,255,255,.1); }
+    .lift:hover::after { opacity: 1; }
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+  .ico { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; margin-bottom: 20px; background: linear-gradient(135deg, rgba(241,217,107,.22), rgba(111,240,214,.14)); border: 1px solid rgba(241,217,107,.25); }
+  .ico svg { width: 24px; height: 24px; fill: none; stroke: var(--bolt); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.28rem; letter-spacing: -0.01em; margin: 0 0 10px; }
+  .panel p { margin: 0; color: var(--ink-soft); font-size: 0.98rem; }
+  .unit { display: inline-block; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); width: 100%; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bolt); }
+
+  /* Proceso */
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; counter-reset: paso; }
+  .steps li { counter-increment: paso; }
+  .steps li::before { content: counter(paso, decimal-leading-zero); display: block; font-family: var(--font-display); font-weight: 800; font-size: 3.2rem; line-height: 1; letter-spacing: -0.04em; margin-bottom: 18px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; opacity: .95; }
+  .steps h3 { margin: 0 0 8px; }
+
+  /* Calculadora */
+  .calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 36px; align-items: center; padding: 36px; }
+  .calc-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 16px; }
+  .calc-label { font-weight: 600; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 4px; background: rgba(244,247,242,0.05); }
+  .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .seg label { display: inline-flex; align-items: center; min-height: 36px; padding: 0 18px; border-radius: 999px; font-size: 0.9rem; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: color .2s, background .25s; }
+  .seg input:checked + label { background: linear-gradient(120deg, #f6e27a, #d8f27a); color: #1a1600; }
+  .seg input:focus-visible + label { outline: 2px solid var(--bolt); outline-offset: 2px; }
+  .eq { margin: 16px 0 0; font-size: 0.92rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .calc output.big { display: block; font-family: var(--font-display); font-weight: 800; font-size: clamp(2.4rem, 6vw, 3.6rem); line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin-bottom: 22px; }
+  .calc output.big small { font-size: 0.4em; font-weight: 600; color: var(--ink-soft); letter-spacing: 0; margin-left: 8px; }
+  /* Control deslizante con relleno degradado */
+  .calc input[type="range"] { --pct: 20%; display: block; width: 100%; height: 28px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  .calc input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--mint), var(--bolt)) 0 / var(--pct) 100% no-repeat, rgba(244,247,242,.16); }
+  .calc input[type="range"]::-moz-range-track { height: 6px; border-radius: 6px; background: rgba(244,247,242,.16); }
+  .calc input[type="range"]::-moz-range-progress { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--mint), var(--bolt)); }
+  .calc input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 50%; background: #fff7cf; border: 4px solid var(--bolt); box-shadow: 0 4px 14px rgba(0,0,0,.45), 0 0 0 6px rgba(241,217,107,.16); transition: box-shadow .2s, transform .2s; }
+  .calc input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff7cf; border: 4px solid var(--bolt); box-shadow: 0 4px 14px rgba(0,0,0,.45), 0 0 0 6px rgba(241,217,107,.16); }
+  .calc input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 4px 14px rgba(0,0,0,.45), 0 0 0 10px rgba(241,217,107,.2); }
+  .calc input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+  .results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .res { border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; background: linear-gradient(160deg, rgba(244,247,242,.07), rgba(244,247,242,.02)); min-width: 0; }
+  .res b { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; font-family: var(--font-display); font-size: clamp(1.5rem, 6.4vw, 2rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .res b small { font-size: 0.48em; font-weight: 600; color: var(--bolt); letter-spacing: 0; }
+  .res span { display: block; font-size: 0.85rem; color: var(--ink-soft); margin-top: 6px; overflow-wrap: anywhere; }
+  .note { font-size: 0.82rem; color: var(--ink-soft); margin: 0; grid-column: 1 / -1; opacity: .85; }
+
+  /* Contacto */
+  .contact { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 28px; padding: 44px 40px; background:
+      radial-gradient(70% 140% at 100% 0%, rgba(241,217,107,.16), transparent 60%),
+      radial-gradient(70% 140% at 0% 100%, rgba(111,240,214,.14), transparent 60%),
+      linear-gradient(160deg, rgba(14,46,50,.82), rgba(6,22,26,.9)); }
+  .contact::before { content: ""; position: absolute; right: 270px; top: 50%; width: 170px; height: 220px; margin-top: -110px; opacity: .08; pointer-events: none;
+      background: var(--bolt); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2 4 14h6l-1 8 9-12h-6z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2 4 14h6l-1 8 9-12h-6z'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .contact-text { position: relative; flex: 1 1 340px; min-width: 0; }
+  .contact h2 { margin-bottom: 12px; }
+  .contact .sub { margin-bottom: 0; }
+  .contact-cta { position: relative; flex: 0 0 auto; }
+  .contact-cta a { transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
+  .contact-cta a:hover { transform: translateY(-3px); }
+  main { padding-bottom: 120px; }
+
+  /* ---------- Aparición al hacer scroll ---------- */
+  .js [data-reveal] { opacity: 0; transform: translate3d(0, 34px, 0); transition: opacity .9s var(--ease) var(--d, 0ms), transform .9s var(--ease) var(--d, 0ms), border-color .4s, box-shadow .4s; }
+  .js [data-reveal="left"] { transform: translate3d(-34px, 0, 0); }
+  .js [data-reveal="scale"] { transform: scale(.96) translate3d(0, 24px, 0); }
+  .js [data-reveal].in { opacity: 1; transform: none; }
+  @media (hover: hover) { .js .lift[data-reveal].in:hover { transform: translateY(-6px); transition-delay: 0ms; } }
+  .grid > :nth-child(2), .steps > :nth-child(2) { --d: 90ms; }
+  .grid > :nth-child(3), .steps > :nth-child(3) { --d: 180ms; }
+  .grid > :nth-child(4), .steps > :nth-child(4) { --d: 270ms; }
+
+  @media (max-width: 820px) {
+    .calc { grid-template-columns: minmax(0, 1fr); padding: 26px 22px; gap: 28px; }
+    .contact { padding: 32px 24px; }
+    .contact::before { display: none; }
+  }
+  @media (max-width: 760px) {
+    .top .wrap { height: 64px; }
+    .nav a:not(.cta) { display: none; }
+    .nav a.cta { margin-left: 0; padding: 8px 16px; font-size: 0.88rem; }
+    .brand { font-size: 1.2rem; }
+    .brand .mark { width: 34px; height: 34px; }
+    .kicker { font-size: 0.7rem; letter-spacing: 0.12em; padding: 7px 13px 7px 12px; margin-bottom: 18px; }
+    .actions { gap: 12px; margin-top: 30px; }
+    .actions .btn { flex: 1 1 100%; }
+    .tags { gap: 8px; margin-top: 32px; }
+    .tags li { font-size: 0.8rem; padding: 6px 12px 6px 10px; }
+    .scroll-cue { display: none; }
+    .hero { padding-bottom: 48px; }
+    section.block { padding-block: 72px 4px; }
+    .panel { padding: 24px; border-radius: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; transition-delay: 0ms !important; }
+    .js [data-reveal] { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<div class="bg" id="bg" aria-hidden="true">
+  <video id="bgv" muted loop playsinline preload="none" tabindex="-1" disablepictureinpicture disableremoteplayback></video>
+</div>
+<div class="veil" aria-hidden="true"></div>
+<div class="veil-extra" id="veilExtra" aria-hidden="true"></div>
+
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="brand" href="#inicio" aria-label="Thunderwatt, ir al inicio">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>
+      <span>Thunder<b>watt</b></span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a href="#servicios">Servicios</a>
+      <a href="#proceso">Cómo trabajamos</a>
+      <a href="#calculadora">Calculadora</a>
+      <a class="cta" href="#contacto">Estudio gratuito</a>
+    </nav>
+  </div>
+</header>
+
+<main id="contenido">
+  <section class="hero" id="inicio">
+    <div class="wrap hero-inner" id="heroInner">
+      <p class="kicker"><i></i>Estudio de energía solar y baterías</p>
+      <h1>Produce tu energía. Guárdala. <span class="grad">Úsala cuando quieras.</span></h1>
+      <p class="lead">Estudiamos tu consumo, diseñamos la instalación de paneles y baterías y la dejamos funcionando, para que dependas menos de la red.</p>
+      <div class="actions">
+        <a class="btn btn-main" href="#contacto">Pedir estudio gratuito <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost" href="#proceso">Ver cómo trabajamos</a>
+      </div>
+      <ul class="tags" aria-label="Qué incluye">
+        <li>Autoconsumo</li><li>Baterías de almacenamiento</li><li>Seguimiento de producción</li>
+      </ul>
+    </div>
+    <a class="scroll-cue" href="#servicios" aria-label="Bajar a servicios">Desliza</a>
+  </section>
+
+  <div class="wrap">
+    <section class="block" id="servicios">
+      <p class="eyebrow" data-reveal>Servicios</p>
+      <h2 data-reveal style="--d:70ms">Lo que hacemos</h2>
+      <p class="sub" data-reveal style="--d:140ms">Del estudio previo a la puesta en marcha, para viviendas, comunidades y negocios.</p>
+      <div class="grid">
+        <article class="panel lift" data-reveal><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16 6.5 5.5h11L20 16z"/><path d="M12 5.5V16M5.3 10.7h13.4M9 20h6M12 16v4"/></svg></div><h3>Paneles solares</h3><p>Instalación de autoconsumo dimensionada a lo que consumes, con la orientación y la inclinación que mejor rinden en tu tejado.</p><span class="unit">Potencia en kWp</span></article>
+        <article class="panel lift" data-reveal><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 11v2M6 10.5v3M10 10.5v3M14 10.5v3"/></svg></div><h3>Baterías de almacenamiento</h3><p>Guarda el excedente del día para usarlo por la tarde y la noche, y mantén luz en los circuitos esenciales si falla la red.</p><span class="unit">Capacidad en kWh</span></article>
+        <article class="panel lift" data-reveal><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-7M10 20V5M16 20v-9M22 20H2"/></svg></div><h3>Estudio de consumo</h3><p>Analizamos tus facturas y tus horarios para saber cuánta energía necesitas y en qué momentos, antes de proponerte nada.</p><span class="unit">Perfil horario</span></article>
+        <article class="panel lift" data-reveal><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12h4l2.2-6 4.6 12 2.2-6h6"/></svg></div><h3>Seguimiento</h3><p>Revisamos la producción de tu instalación y te avisamos si algo rinde por debajo de lo previsto.</p><span class="unit">Producción mensual</span></article>
+      </div>
+    </section>
+
+    <section class="block" id="proceso">
+      <p class="eyebrow" data-reveal>Proceso</p>
+      <h2 data-reveal style="--d:70ms">Cómo trabajamos</h2>
+      <p class="sub" data-reveal style="--d:140ms">Cuatro pasos, siempre en este orden.</p>
+      <ol class="steps">
+        <li class="panel lift" data-reveal><h3>Estudio</h3><p>Revisamos tus facturas, tu tejado y tus horarios de consumo.</p></li>
+        <li class="panel lift" data-reveal><h3>Diseño</h3><p>Calculamos paneles y batería y te presentamos una propuesta con presupuesto cerrado.</p></li>
+        <li class="panel lift" data-reveal><h3>Instalación</h3><p>Montamos el sistema y lo ponemos en marcha, con la documentación en regla.</p></li>
+        <li class="panel lift" data-reveal><h3>Seguimiento</h3><p>Comprobamos que produce lo previsto y resolvemos cualquier incidencia.</p></li>
+      </ol>
+    </section>
+
+    <section class="block" id="calculadora">
+      <p class="eyebrow" data-reveal>Calculadora</p>
+      <h2 data-reveal style="--d:70ms">Calcula el tamaño aproximado</h2>
+      <p class="sub" data-reveal style="--d:140ms">Elige si conoces tu consumo mensual (el de la factura) o el diario, y mueve el control.</p>
+      <div class="panel calc" data-reveal="scale">
+        <div>
+          <div class="calc-head">
+            <span class="calc-label" id="calcLabel">Consumo</span>
+            <div class="seg" role="radiogroup" aria-labelledby="calcLabel">
+              <input type="radio" name="per" id="perM" value="m" checked><label for="perM">Mensual</label>
+              <input type="radio" name="per" id="perD" value="d"><label for="perD">Diario</label>
+            </div>
+          </div>
+          <output class="big" id="kwhOut" for="kwh">350<small>kWh/mes</small></output>
+          <input id="kwh" type="range" min="100" max="1500" step="10" value="350" aria-labelledby="calcLabel">
+          <p class="eq" id="eq">≈ 11,7 kWh al día</p>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="res"><b id="rKwp">3,2<small>kWp</small></b><span>Potencia solar</span></div>
+          <div class="res"><b id="rPan">8<small>paneles</small></b><span>de 450 W cada uno</span></div>
+          <div class="res"><b id="rBat">5<small>kWh</small></b><span>Batería orientativa</span></div>
+          <div class="res"><b id="rYear">4.260<small>kWh/año</small></b><span>Producción estimada</span></div>
+        </div>
+        <p class="note">Estimación orientativa con 4,5 horas de sol pico al día y un 80 % de rendimiento del sistema. Un mes se cuenta como 30 días. El estudio real depende de tu tejado, tu zona y tus horarios.</p>
+      </div>
+    </section>
+
+    <section class="block" id="contacto">
+      <div class="panel contact" data-reveal="scale">
+        <div class="contact-text">
+          <h2>Pide tu estudio gratuito</h2>
+          <p class="sub">Cuéntanos cómo es tu casa o tu negocio por chat y te respondemos con una primera valoración.</p>
+        </div>
+        <div class="contact-cta">
+        <!-- Botón Klyo (copiado tal cual del archivo Botón Klyo v2.4) -->
+            <a href="https://klyo.club/app?para=fraudy_yotto" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:10px;padding:13px 24px;border-radius:14px;
+                      background:linear-gradient(120deg,#2dd4bf,#8b7cf6);color:#06121a;
+                      font-family:'Segoe UI',system-ui,Arial,sans-serif;font-weight:700;font-size:16px;
+                      text-decoration:none;box-shadow:0 10px 26px rgba(45,212,191,.28)">
+              <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="rgba(255,255,255,.25)"/><path d="M18 14h28a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6H30l-9 8v-8h-3a6 6 0 0 1-6-6V20a6 6 0 0 1 6-6z" fill="#ffffff"/><circle cx="24" cy="29" r="3.4" fill="#2dd4bf"/><circle cx="33" cy="29" r="3.4" fill="#6d6ff2"/><circle cx="42" cy="29" r="3.4" fill="#8b7cf6"/></svg>
+              Escríbeme por Klyo
+            </a>
+            <!-- ============ hasta aquí el botón ============ -->
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var doc = document.documentElement;
+  var mq = function (q) { return window.matchMedia(q).matches; };
+  var reduced = mq('(prefers-reduced-motion: reduce)');
+
+  /* ---------- Vídeo de fondo ----------
+     El póster (ya cargado) es lo primero que se ve. El vídeo se pide cuando la página ya terminó de cargar,
+     con la versión vertical u horizontal según la pantalla (calidad completa, 1080p), y entra con un fundido. Sin vídeo si el usuario pide
+     menos movimiento o ahorro de datos. */
+  var bg = document.getElementById('bg');
+  var video = document.getElementById('bgv');
+  var conn = navigator.connection || {};
+  var skipVideo = reduced || conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '');
+  var canMp4 = video.canPlayType && video.canPlayType('video/mp4; codecs="avc1.640029"') !== '';
+  var currentSrc = '';
+
+  function pickSrc() {
+    return mq('(orientation: portrait)') ? 'bg-v.mp4' : 'bg-h.mp4';
+  }
+  function startVideo() {
+    var src = pickSrc();
+    if (src === currentSrc) { return; }
+    currentSrc = src;
+    bg.classList.remove('on');
+    video.preload = 'auto';
+    video.src = src;
+    video.muted = true;
+    var p = video.play();
+    if (p && p.catch) { p.catch(function () { /* el póster se queda de fondo */ }); }
+  }
+  video.addEventListener('playing', function () { bg.classList.add('on'); });
+  if (!skipVideo && canMp4) {
+    var go = function () { (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(startVideo, { timeout: 1500 }); };
+    if (document.readyState === 'complete') { go(); } else { window.addEventListener('load', go, { once: true }); }
+    var rt;
+    window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (currentSrc) { startVideo(); } }, 400); });
+    /* No gastar batería con la pestaña oculta */
+    document.addEventListener('visibilitychange', function () {
+      if (!currentSrc) { return; }
+      if (document.hidden) { video.pause(); } else { var p = video.play(); if (p && p.catch) { p.catch(function () {}); } }
+    });
+  }
+
+  /* ---------- Scroll: un solo manejador, una sola lectura y escrituras solo de transform/opacity ---------- */
+  var top = document.getElementById('top');
+  var progress = document.getElementById('progress');
+  var veilExtra = document.getElementById('veilExtra');
+  var heroInner = document.getElementById('heroInner');
+  var ticking = false, lastScrolled = null;
+
+  function frame() {
+    ticking = false;
+    var y = window.pageYOffset || doc.scrollTop;
+    var vh = window.innerHeight;
+    var max = Math.max(1, doc.scrollHeight - vh);
+    progress.style.transform = 'scaleX(' + Math.min(1, y / max).toFixed(4) + ')';
+    veilExtra.style.opacity = (Math.min(1, y / (vh * 0.8)) * 0.3).toFixed(3);
+    var scrolled = y > 24;
+    if (scrolled !== lastScrolled) { top.classList.toggle('scrolled', scrolled); lastScrolled = scrolled; }
+    if (!reduced && y < vh * 1.2) {
+      var p = Math.min(1, y / (vh * 0.7));
+      heroInner.style.transform = 'translate3d(0,' + (-p * 46).toFixed(1) + 'px,0)';
+      heroInner.style.opacity = (1 - p * 1.15).toFixed(3);
+    }
+  }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  frame();
+
+  /* ---------- Aparición de elementos al entrar en pantalla ---------- */
+  var items = document.querySelectorAll('[data-reveal]');
+  if ('IntersectionObserver' in window && !reduced) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    Array.prototype.forEach.call(items, function (el) { io.observe(el); });
+  } else {
+    Array.prototype.forEach.call(items, function (el) { el.classList.add('in'); });
+  }
+
+  /* ---------- Resplandor que sigue al cursor en los paneles ---------- */
+  if (mq('(hover: hover) and (pointer: fine)')) {
+    document.addEventListener('pointermove', function (e) {
+      var card = e.target.closest && e.target.closest('.panel');
+      if (!card) { return; }
+      var r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    }, { passive: true });
+  }
+
+  /* ---------- Calculadora orientativa: la base de cálculo es el consumo diario (kWh/día) ---------- */
+  var HSP = 4.5, PR = 0.8, PANEL_W = 450, DAYS = 30;
+  var fmt = function (n, d) {
+    var s = n.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
+    return s.replace(/^(\d{4,})/, function (m) { return m.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); });
+  };
+  var kwh = document.getElementById('kwh');
+  var radios = document.querySelectorAll('input[name="per"]');
+  var MODES = {
+    m: { min: 100, max: 1500, step: 10, unit: 'kWh/mes', toDaily: function (x) { return x / DAYS; }, fromDaily: function (d) { return d * DAYS; } },
+    d: { min: 3, max: 50, step: 0.5, unit: 'kWh/día', toDaily: function (x) { return x; }, fromDaily: function (d) { return d; } }
+  };
+  var mode = 'm';
+  var daily = 350 / DAYS;
+
+  function clamp(x, lo, hi) { return Math.min(hi, Math.max(lo, x)); }
+
+  function calc() {
+    var kwp = daily / (HSP * PR);
+    var panels = Math.ceil(kwp * 1000 / PANEL_W);
+    var battery = Math.max(2, Math.round(daily * 0.4 * 2) / 2);
+    var year = daily * 365;
+    var cfg = MODES[mode];
+    var shown = Number(kwh.value);
+    var dec = cfg.step < 1 ? 1 : 0;
+    kwh.style.setProperty('--pct', ((shown - cfg.min) / (cfg.max - cfg.min) * 100).toFixed(1) + '%');
+    document.getElementById('kwhOut').innerHTML = fmt(shown, dec) + '<small>' + cfg.unit + '</small>';
+    document.getElementById('eq').textContent = mode === 'm'
+      ? '≈ ' + fmt(daily, 1) + ' kWh al día'
+      : '≈ ' + fmt(Math.round(daily * DAYS), 0) + ' kWh al mes';
+    document.getElementById('rKwp').innerHTML = fmt(kwp, 1) + '<small>kWp</small>';
+    document.getElementById('rPan').innerHTML = panels + '<small>paneles</small>';
+    document.getElementById('rBat').innerHTML = fmt(battery, battery % 1 ? 1 : 0) + '<small>kWh</small>';
+    document.getElementById('rYear').innerHTML = fmt(Math.round(year / 10) * 10, 0) + '<small>kWh/año</small>';
+  }
+
+  function setMode(next) {
+    var cfg = MODES[next];
+    var val = clamp(Math.round(cfg.fromDaily(daily) / cfg.step) * cfg.step, cfg.min, cfg.max);
+    mode = next;
+    kwh.min = cfg.min; kwh.max = cfg.max; kwh.step = cfg.step; kwh.value = val;
+    daily = cfg.toDaily(val);
+    calc();
+  }
+
+  kwh.addEventListener('input', function () {
+    daily = MODES[mode].toDaily(Number(kwh.value));
+    calc();
+  });
+  Array.prototype.forEach.call(radios, function (r) {
+    r.addEventListener('change', function () { if (r.checked) { setMode(r.value); } });
+  });
+  calc();
+})();
+</script>
+</body>
+</html>
